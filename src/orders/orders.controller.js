@@ -1,4 +1,3 @@
-const { builtinModules } = require("module");
 const path = require("path");
 
 // Use the existing order data
@@ -34,6 +33,7 @@ function statusIsValid(req, res, next) {
       message: `A delivered order cannot be changed`,
     });
   }
+  res.locals.data = data;
   next();
 }
 
@@ -47,6 +47,7 @@ function updateOrderIdIsValid(req, res, next) {
       message: `Order id does not match route id. Order: ${id}, Route: ${orderId}.`,
     });
   }
+  res.locals.data = data;
   next();
 }
 
@@ -93,6 +94,7 @@ function orderHasValidFields(req, res, next) {
     }
   }
 
+  res.locals.data = data;
   res.locals.orders = dishes;
   next();
 }
@@ -102,7 +104,9 @@ function orderExists(req, res, next) {
   const foundOrder = orders.find((order) => order.id === orderId);
 
   if (foundOrder) {
+    res.locals.orderId = orderId;
     res.locals.order = foundOrder;
+    res.locals.data = req.body.data;
     next();
   }
   next({
@@ -120,15 +124,16 @@ const list = (req, res) => {
 };
 
 const read = (req, res) => {
-  const foundOrder = res.locals.order;
+  const { order } = res.locals;
 
-  res.json({ data: foundOrder });
+  res.json({ data: order });
 };
 
 const create = (req, res) => {
+  const { data } = res.locals;
   const newOrder = {
     id: nextId(),
-    ...req.body.data,
+    ...data,
   };
 
   orders.push(newOrder);
@@ -142,27 +147,23 @@ const create = (req, res) => {
 
 //   const updatedOrder = {
 
-//     id,
+//     id: orderId,
 //     deliverTo,
 //     mobileNumber,
 //     dishes,
 //     status,
 //   };
 
-//   const updatedOrders = {
-//       ...orders,
-//       updatedOrder,
-//   }
-
 //   //const order = orders.find((order) => order.id === orderId);
-//   Object.assign(updatedOrders, updatedOrder);
+//   Object.assign(res.locals.order, updatedOrder);
 
 //   res.status(200).json({ data: updatedOrder });
 // };
 
 const update = (req, res, next) => {
   const { order } = res.locals;
-  const { data: update } = req.body;
+  const { data } = res.locals;
+  const { update } = data;
   for (let prop in update) {
     if (update[prop]) {
       order[prop] = update[prop];
@@ -172,7 +173,7 @@ const update = (req, res, next) => {
 };
 
 const destroy = (req, res, next) => {
-  const { orderId } = req.params;
+  const { orderId } = res.locals;
   const { status } = res.locals.order;
 
   if (status === "pending") {

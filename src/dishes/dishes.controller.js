@@ -10,7 +10,8 @@ const nextId = require("../utils/nextId");
 
 //The middleware
 function dishHasValidFields(req, res, next) {
-  const { data = {} } = req.body;
+  const { data } = req.body;
+
   const VALID_FIELDS = ["name", "price", "description", "image_url"];
 
   //Are all required fields present
@@ -30,15 +31,19 @@ function dishHasValidFields(req, res, next) {
       message: `Field price must be a number greater than zero`,
     });
   }
+  res.locals.data = data;
   next();
 }
 
 function dishExists(req, res, next) {
+  const { data } = req.body;
   const { dishId } = req.params;
   const foundDish = dishes.find((dish) => dish.id === dishId);
 
   if (foundDish) {
     res.locals.dish = foundDish;
+    res.locals.dishId = dishId;
+    res.locals.data = data;
     next();
   }
   next({
@@ -62,14 +67,14 @@ const read = (req, res) => {
 };
 
 const update = (req, res, next) => {
-  const { dishId } = req.params;
-  const { data = {} } = req.body;
+  const { dishId } = res.locals;
+  const { data } = res.locals;
   const { id, name, description, price, image_url } = data;
 
-  if (id && id !== dishId ) {
+  if (id && id !== dishId) {
     return next({
       status: 400,
-      message: `Data id field ${id} does not match route id: ${req.params}`,
+      message: `Data id field ${id} does not match route id: ${dishId}`,
     });
   }
 
@@ -88,8 +93,9 @@ const update = (req, res, next) => {
 };
 
 const create = (req, res) => {
+  const {data} = res.locals;
   const newDish = {
-    ...req.body.data,
+    ...data,
     id: nextId(),
   };
 
